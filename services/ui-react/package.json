@@ -1,5 +1,5 @@
 {
-  "name": "ui-react",
+  "name": "@fuzefront/fuzeagent-ui",
   "private": true,
   "version": "0.0.0",
   "type": "module",

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Badge, Card, Input } from '../design-system';
 import { apiClient } from '../services/api';
+import { MultimodalS3Uploader, type S3UploadJob } from '../fuzeagent-ui/MultimodalS3Uploader';
 import {
   BookOpen,
   MessageSquare,
@@ -12,6 +13,7 @@ import {
   Send,
   Database,
   Trash2,
+  HardDrive,
 } from 'lucide-react';
 
 export interface WikiDocument {
@@ -120,7 +122,8 @@ export const BrainWikiExplorer: React.FC<BrainWikiProps> = ({
   onClose,
 }) => {
   const effectiveBrainId = _brainId || 'brain_org_global';
-  const [activeTab, setActiveTab] = useState<'wiki' | 'chat'>('wiki');
+  const [activeTab, setActiveTab] = useState<'wiki' | 's3' | 'chat'>('wiki');
+  const [s3DrawerOpen, setS3DrawerOpen] = useState(false);
   const [documents, setDocuments] = useState<WikiDocument[]>(SAMPLE_DOCS.default);
   const [selectedDocId, setSelectedDocId] = useState<string>(SAMPLE_DOCS.default[0].id);
   const [searchQuery, setSearchQuery] = useState('');
@@ -212,6 +215,23 @@ export const BrainWikiExplorer: React.FC<BrainWikiProps> = ({
     if (selectedDocId === id && documents.length > 1) {
       setSelectedDocId(documents.filter(d => d.id !== id)[0].id);
     }
+  };
+
+  const handleMultimodalAssetIngested = (job: S3UploadJob) => {
+    const newDoc: WikiDocument = {
+      id: `doc_s3_${job.id}`,
+      title: job.filename,
+      category: job.category,
+      content: `# Multimodal S3 Asset: ${job.filename}\n\n- **S3 URI**: \`${job.s3Uri}\`\n- **MIME Type**: \`${job.contentType}\`\n- **Multipart Upload ID**: \`${job.uploadId}\`\n- **ETag**: \`${job.etagFinal || 'verified'}\`\n- **pgvector Chunks Indexed**: ${job.chunksCreated}\n- **Graph Sync**: Linked to Neo4j Knowledge Graph for ${brainName}`,
+      author: 'MinIO S3 Ingestion Pipeline',
+      updatedAt: 'Just now',
+      tags: ['s3-multimodal', job.category.toLowerCase().replace(/\s+/g, '-'), 'pgvector'],
+      chunksCount: job.chunksCreated,
+    };
+    setDocuments(prev => {
+      if (prev.some(d => d.title === job.filename)) return prev;
+      return [newDoc, ...prev];
+    });
   };
 
   const handleSendChat = async () => {
@@ -354,6 +374,24 @@ export const BrainWikiExplorer: React.FC<BrainWikiProps> = ({
               <BookOpen size={14} /> Wiki & Docs
             </button>
             <button
+              onClick={() => setActiveTab('s3')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 12px',
+                borderRadius: 'var(--radius-sm, 4px)',
+                border: 'none',
+                background: activeTab === 's3' ? 'var(--accent-color, #6e5cff)' : 'transparent',
+                color: activeTab === 's3' ? '#ffffff' : 'var(--text-secondary, #9fa9bc)',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 500,
+              }}
+            >
+              <HardDrive size={14} /> S3 Multimodal Storage
+            </button>
+            <button
               onClick={() => setActiveTab('chat')}
               style={{
                 display: 'flex',
@@ -372,6 +410,17 @@ export const BrainWikiExplorer: React.FC<BrainWikiProps> = ({
               <MessageSquare size={14} /> Chat with Brain
             </button>
           </div>
+
+          {activeTab !== 's3' && (
+            <Button
+              size="sm"
+              variant={s3DrawerOpen ? 'seam' : 'ghost'}
+              icon={<HardDrive size={14} />}
+              onClick={() => setS3DrawerOpen(prev => !prev)}
+            >
+              {s3DrawerOpen ? 'Hide S3 Drawer' : 'S3 Uploader Drawer'}
+            </Button>
+          )}
 
           {activeTab === 'wiki' && (
             <Button
@@ -393,8 +442,17 @@ export const BrainWikiExplorer: React.FC<BrainWikiProps> = ({
       </div>
 
       {/* Main Content Area */}
-      {activeTab === 'wiki' ? (
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {activeTab === 's3' ? (
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            <MultimodalS3Uploader
+              brainId={effectiveBrainId}
+              brainName={brainName}
+              onAssetIngested={handleMultimodalAssetIngested}
+            />
+          </div>
+        ) : activeTab === 'wiki' ? (
+          <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           {/* Wiki Documents Sidebar */}
           <div
             style={{
@@ -658,7 +716,29 @@ export const BrainWikiExplorer: React.FC<BrainWikiProps> = ({
             </Button>
           </div>
         </div>
-      )}
+        )}
+
+        {/* Expandable S3 Multimodal Storage Drawer alongside Wiki & Chat */}
+        {s3DrawerOpen && activeTab !== 's3' && (
+          <div
+            style={{
+              width: '480px',
+              borderLeft: '1px solid var(--border-color, #232c3d)',
+              backgroundColor: 'var(--bg-secondary, #0b0e15)',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <MultimodalS3Uploader
+              brainId={effectiveBrainId}
+              brainName={brainName}
+              compact
+              onAssetIngested={handleMultimodalAssetIngested}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Add Document Modal */}
       {newDocModalOpen && (

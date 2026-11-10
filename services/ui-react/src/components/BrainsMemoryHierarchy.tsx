@@ -12,9 +12,11 @@ import {
   Edit3, 
   Search, 
   Plus,
-  BookOpen
+  BookOpen,
+  Zap
 } from 'lucide-react';
 import { BrainWikiExplorer } from './BrainWikiExplorer';
+import { MultiTierContextPipeline } from '../fuzeagent-ui/MultiTierContextPipeline';
 
 export interface BrainItem {
   id: string;
@@ -113,7 +115,7 @@ export function BrainsMemoryHierarchy() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [querySimulation, setQuerySimulation] = useState('How do we authenticate with FuzeKeys in the bank scraper?');
   const [isSimulating, setIsSimulating] = useState(false);
-  const [activeMode, setActiveMode] = useState<'wiki' | 'hierarchy'>('wiki');
+  const [activeMode, setActiveMode] = useState<'pipeline' | 'wiki' | 'hierarchy'>('pipeline');
   const [simulationResult, setSimulationResult] = useState<string | null>(null);
 
   // New Custom Brain form state
@@ -196,8 +198,8 @@ export function BrainsMemoryHierarchy() {
             <h2 className="text-xl font-bold tracking-tight">Brains & Memory Hierarchy (RAG)</h2>
           </div>
           <p className="text-sm text-slate-300 max-w-2xl">
-            Hierarchical RAG architecture providing multi-level memory isolation: from User Profile and Org Global standards, 
-            down to Team domain knowledge, Agent Persona persistent long-term learning, and ephemeral session memory.
+            Hierarchical RAG architecture providing multi-level memory isolation: from Organization Global and Cross-Functional Brains,
+            down to Team domain knowledge, Agent Persona persistent long-term learning, and Continuous Post-Prompt Memory Promotion.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -212,7 +214,24 @@ export function BrainsMemoryHierarchy() {
       </div>
 
       {/* Mode Switcher */}
-      <div className="flex items-center gap-2 border-b pb-3" style={{ borderColor: 'var(--border-color, #232c3d)' }}>
+      <div className="flex items-center gap-2 flex-wrap border-b pb-3" style={{ borderColor: 'var(--ff-border, var(--border-color, #232c3d))' }}>
+        <button
+          onClick={() => setActiveMode('pipeline')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            activeMode === 'pipeline'
+              ? 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white shadow-md'
+              : 'hover:opacity-100 opacity-70'
+          }`}
+          style={{
+            backgroundColor: activeMode === 'pipeline' ? undefined : 'var(--ff-bg-card, var(--bg-tertiary, #141a26))',
+            border: activeMode === 'pipeline' ? 'none' : '1px solid var(--ff-border, var(--border-color, #232c3d))',
+            color: activeMode === 'pipeline' ? '#fff' : 'var(--ff-text-muted, var(--text-secondary, #9fa9bc))'
+          }}
+        >
+          <Zap className="w-4 h-4" />
+          <span>4-Tier Context Pipeline & Memory Promotion</span>
+        </button>
+
         <button
           onClick={() => setActiveMode('wiki')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
@@ -221,9 +240,9 @@ export function BrainsMemoryHierarchy() {
               : 'hover:opacity-100 opacity-70'
           }`}
           style={{
-            backgroundColor: activeMode === 'wiki' ? undefined : 'var(--bg-tertiary, #141a26)',
-            border: activeMode === 'wiki' ? 'none' : '1px solid var(--border-color, #232c3d)',
-            color: activeMode === 'wiki' ? '#fff' : 'var(--text-secondary, #9fa9bc)'
+            backgroundColor: activeMode === 'wiki' ? undefined : 'var(--ff-bg-card, var(--bg-tertiary, #141a26))',
+            border: activeMode === 'wiki' ? 'none' : '1px solid var(--ff-border, var(--border-color, #232c3d))',
+            color: activeMode === 'wiki' ? '#fff' : 'var(--ff-text-muted, var(--text-secondary, #9fa9bc))'
           }}
         >
           <BookOpen className="w-4 h-4" />
@@ -238,9 +257,9 @@ export function BrainsMemoryHierarchy() {
               : 'hover:opacity-100 opacity-70'
           }`}
           style={{
-            backgroundColor: activeMode === 'hierarchy' ? undefined : 'var(--bg-tertiary, #141a26)',
-            border: activeMode === 'hierarchy' ? 'none' : '1px solid var(--border-color, #232c3d)',
-            color: activeMode === 'hierarchy' ? '#fff' : 'var(--text-secondary, #9fa9bc)'
+            backgroundColor: activeMode === 'hierarchy' ? undefined : 'var(--ff-bg-card, var(--bg-tertiary, #141a26))',
+            border: activeMode === 'hierarchy' ? 'none' : '1px solid var(--ff-border, var(--border-color, #232c3d))',
+            color: activeMode === 'hierarchy' ? '#fff' : 'var(--ff-text-muted, var(--text-secondary, #9fa9bc))'
           }}
         >
           <Brain className="w-4 h-4" />
@@ -248,13 +267,32 @@ export function BrainsMemoryHierarchy() {
         </button>
       </div>
 
+      {activeMode === 'pipeline' && (
+        <MultiTierContextPipeline
+          onSelectBrainForWiki={(brainId, brainName) => {
+            setSelectedBrain({
+              id: brainId,
+              name: brainName,
+              scope: 'custom',
+              description: `Multi-Tier Knowledge Brain (${brainId})`,
+              itemCount: 24,
+              lastUpdated: 'Just now',
+              isPersistent: true,
+              consultAccess: { teams: ['all'], agents: ['all'], allTeams: true, allAgents: true },
+              updateAccess: { teams: ['Core Engineering'], agents: ['Authorized Agents'], allTeams: false, allAgents: false },
+            });
+            setActiveMode('wiki');
+          }}
+        />
+      )}
+
       {activeMode === 'wiki' && (
         <div className="h-[750px] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
           <BrainWikiExplorer
             brainId={selectedBrain.id}
             brainName={selectedBrain.name}
             brainTier={selectedBrain.scope.toUpperCase()}
-            onClose={() => setActiveMode('hierarchy')}
+            onClose={() => setActiveMode('pipeline')}
           />
         </div>
       )}

@@ -14,6 +14,7 @@ import SandboxesView from './components/SandboxesView'
 import EscalationsView from './components/EscalationsView'
 import { AgentChatWorkspace } from './components/AgentChatWorkspace'
 import { AppBuildsStudio } from './components/AppBuildsStudio'
+import { AgentPersonaAvatarStudio } from './fuzeagent-ui/AgentPersonaAvatarStudio'
 import { OrgProvider, useOrgContext } from './context/OrgContext'
 import { usePortalTheme } from './design-system'
 import { api, createWebSocket } from './config/api'
@@ -39,7 +40,7 @@ function FuzeAgentDashboard() {
   // UI state
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'workspace' | 'builds' | 'templates' | 'brains' | 'sandboxes' | 'teams' | 'escalations'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'workspace' | 'builds' | 'templates' | 'brains' | 'personas' | 'sandboxes' | 'teams' | 'escalations'>('overview')
   const { isPlatformMode } = useOrgContext()
   const isEmbedded = isPlatformMode || (typeof window !== 'undefined' && (Boolean((window as any).__FUZEFRONT__) || window.self !== window.top))
   const { theme, isDark, toggleTheme } = usePortalTheme()
@@ -54,9 +55,10 @@ function FuzeAgentDashboard() {
         { id: 'builds', label: 'App Builds & Deploy', icon: '🚀', order: 3 },
         { id: 'templates', label: 'Templates & Blueprints', icon: '📦', order: 4 },
         { id: 'brains', label: 'Brains & Memory Wiki', icon: '🧠', order: 5 },
-        { id: 'sandboxes', label: 'Active Agents', icon: '🛡️', order: 6 },
-        { id: 'teams', label: 'Teams & Hierarchy', icon: '👥', order: 7 },
-        { id: 'escalations', label: 'Escalations & Approvals', icon: '⚡', order: 8 },
+        { id: 'personas', label: 'Persona & Avatar Studio', icon: '🎨', order: 6 },
+        { id: 'sandboxes', label: 'Active Agents', icon: '🛡️', order: 7 },
+        { id: 'teams', label: 'Teams & Hierarchy', icon: '👥', order: 8 },
+        { id: 'escalations', label: 'Escalations & Approvals', icon: '⚡', order: 9 },
       ])
     }
 
@@ -64,7 +66,7 @@ function FuzeAgentDashboard() {
       const target = e.detail?.section || e.detail?.id || e.detail
       if (typeof target === 'string') {
         const clean = target.replace(/^\/?(app\/)?fuzeagent\/?/, '').replace(/^\//, '')
-        if (['overview', 'workspace', 'builds', 'templates', 'brains', 'sandboxes', 'teams', 'escalations'].includes(clean)) {
+        if (['overview', 'workspace', 'builds', 'templates', 'brains', 'personas', 'sandboxes', 'teams', 'escalations'].includes(clean)) {
           setActiveTab(clean as any)
         } else if (clean === '' || clean === 'agents') {
           setActiveTab('overview')
@@ -378,6 +380,7 @@ function FuzeAgentDashboard() {
               { id: 'builds', label: 'App Builds', icon: '🚀' },
               { id: 'templates', label: 'Templates', icon: '📦' },
               { id: 'brains', label: 'Brains & Memory', icon: '🧠' },
+              { id: 'personas', label: 'Persona Studio', icon: '🎨' },
               { id: 'sandboxes', label: 'Active Agents', icon: '🛡️' },
               { id: 'teams', label: 'Teams', icon: '👥' },
               { id: 'escalations', label: 'Escalations', icon: '⚡' },
@@ -450,6 +453,7 @@ function FuzeAgentDashboard() {
                     { id: 'builds', label: 'App Builds', icon: '🚀' },
                     { id: 'templates', label: 'Templates', icon: '📦' },
                     { id: 'brains', label: 'Brains & Memory', icon: '🧠' },
+                    { id: 'personas', label: 'Persona Studio', icon: '🎨' },
                     { id: 'sandboxes', label: 'Active Agents', icon: '🛡️' },
                     { id: 'teams', label: 'Teams', icon: '👥' },
                     { id: 'escalations', label: 'Escalations', icon: '⚡' },
@@ -535,6 +539,7 @@ function FuzeAgentDashboard() {
           <TemplatesHub onUseTemplateToCreateAgent={() => setShowCreateModal(true)} />
         )}
         {activeTab === 'brains' && <BrainsMemoryHierarchy />}
+        {activeTab === 'personas' && <AgentPersonaAvatarStudio />}
         {activeTab === 'sandboxes' && <SandboxesView />}
         {activeTab === 'escalations' && <EscalationsView />}
 
