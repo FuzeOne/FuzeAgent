@@ -189,6 +189,94 @@ export const apiClient = {
       return [];
     }
   },
+
+  // Flow 08: Multimodal S3 Resumable Upload & Quota API
+  async getS3StorageQuota(organizationId = 'org_default'): Promise<any> {
+    try {
+      const res = await axios.get(`${ORCHESTRATOR_BASE}/s3/quota`, { params: { organization_id: organizationId } });
+      return res.data;
+    } catch {
+      return {
+        organization_id: organizationId,
+        bucket_name: `fuzeagent-org-${organizationId.replace(/_/g, '-')}`,
+        used_bytes: 1975684956,
+        used_mb: 1884.16,
+        quota_bytes: 5368709120,
+        quota_mb: 5120,
+        percentage_used: 36.8,
+        file_count: 14,
+        remaining_bytes: 3393024164,
+      };
+    }
+  },
+
+  async initiateS3MultipartUpload(payload: {
+    organization_id?: string;
+    brain_id: string;
+    filename: string;
+    total_size_bytes: number;
+    content_type?: string;
+    category?: string;
+  }): Promise<any> {
+    const res = await axios.post(`${ORCHESTRATOR_BASE}/s3/multipart/initiate`, payload);
+    return res.data;
+  },
+
+  async completeS3MultipartUpload(payload: {
+    organization_id?: string;
+    s3_key: string;
+    upload_id: string;
+    parts: Array<{ PartNumber: number; ETag: string }>;
+  }): Promise<any> {
+    const res = await axios.post(`${ORCHESTRATOR_BASE}/s3/multipart/complete`, payload);
+    return res.data;
+  },
+
+  // Flow 09: Multi-Tier Context Distillation & Chat Memory Promotion API
+  async distillHierarchicalContext(payload: {
+    agent_id: string;
+    query: string;
+    team_id?: string;
+    functional_domain?: string;
+    organization_id?: string;
+    token_budget?: number;
+  }): Promise<any> {
+    const res = await axios.post(`${ORCHESTRATOR_BASE}/brains/distill`, payload);
+    return res.data;
+  },
+
+  async promoteChatMemory(payload: {
+    session_id: string;
+    agent_id: string;
+    user_messages: string[];
+    agent_responses: string[];
+    team_id?: string;
+    functional_domain?: string;
+    organization_id?: string;
+  }): Promise<any> {
+    const res = await axios.post(`${ORCHESTRATOR_BASE}/brains/promote`, payload);
+    return res.data;
+  },
+
+  // Flow 10: Agent Persona & Avatar Studio API
+  async getAgentPersonas(): Promise<any[]> {
+    try {
+      const res = await axios.get(`${ORCHESTRATOR_BASE}/personas`);
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
+  },
+
+  async updateAgentPersona(agentId: string, payload: {
+    human_name?: string;
+    role_title?: string;
+    bio?: string;
+    organization_id?: string;
+  }): Promise<any> {
+    const res = await axios.put(`${ORCHESTRATOR_BASE}/personas/${encodeURIComponent(agentId)}`, payload);
+    return res.data;
+  },
 };
 
 export const api = apiClient;

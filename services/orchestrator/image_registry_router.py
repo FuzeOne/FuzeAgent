@@ -1302,6 +1302,162 @@ async def multi_agent_websocket(websocket: WebSocket):
 
 
 # ---------------------------------------------------------------------------
+# Track #5: Multimodal S3 Resumable Upload & Org Quota Endpoints (Flow 08)
+# ---------------------------------------------------------------------------
+try:
+    from .s3_storage import QuotaExceededError, s3_storage
+except ImportError:
+    from s3_storage import QuotaExceededError, s3_storage
+
+
+class S3ResumableInitRequest(BaseModel):
+    organization_id: str = "org_default"
+    brain_id: str = "brain_org_global"
+    filename: str
+    total_size_bytes: int
+    content_type: str = "application/octet-stream"
+    category: str = "media"
+
+
+class S3ResumableCompleteRequest(BaseModel):
+    organization_id: str = "org_default"
+    s3_key: str
+    upload_id: str
+    parts: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+@router.get("/s3/quota", summary="Get Organization S3 Storage Quota & Usage")
+async def get_s3_storage_quota(organization_id: str = "org_default"):
+    return s3_storage.get_storage_usage(organization_id)
+
+
+@router.post("/s3/multipart/initiate", summary="Initiate Resumable S3 Multipart Upload")
+async def initiate_s3_multipart_upload(req: S3ResumableInitRequest):
+    try:
+        return s3_storage.initiate_resumable_upload(
+            organization_id=req.organization_id,
+            brain_id=req.brain_id,
+            filename=req.filename,
+            total_size_bytes=req.total_size_bytes,
+            content_type=req.content_type,
+            category=req.category,
+        )
+    except QuotaExceededError as e:
+        raise HTTPException(status_code=413, detail=str(e))
+
+
+@router.post("/s3/multipart/complete", summary="Complete Resumable S3 Multipart Upload")
+async def complete_s3_multipart_upload(req: S3ResumableCompleteRequest):
+    return s3_storage.complete_resumable_upload(
+        organization_id=req.organization_id,
+        s3_key=req.s3_key,
+        upload_id=req.upload_id,
+        parts=req.parts,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Track #6: Multi-Tier Context Distillation & Chat Memory Promotion (Flow 09)
+# ---------------------------------------------------------------------------
+try:
+    from .chat_memory_promoter import chat_memory_promoter
+except ImportError:
+    from chat_memory_promoter import chat_memory_promoter
+
+
+class ContextDistillRequest(BaseModel):
+    agent_id: str = "python-dev"
+    query: str
+    team_id: Optional[str] = "team_platform"
+    functional_domain: Optional[str] = None
+    organization_id: str = "org_default"
+    token_budget: int = 4000
+
+
+class MemoryPromoteRequest(BaseModel):
+    session_id: str
+    agent_id: str = "python-dev"
+    user_messages: List[str]
+    agent_responses: List[str]
+    team_id: Optional[str] = "team_platform"
+    functional_domain: Optional[str] = None
+    organization_id: str = "org_default"
+
+
+@router.post(
+    "/brains/distill",
+    summary="Distill 4-Tier Hierarchical Brain Context with RRF & Token Budget",
+)
+async def distill_hierarchical_context(req: ContextDistillRequest):
+    return await brain_store.get_hierarchical_context_for_agent(
+        agent_id=req.agent_id,
+        query=req.query,
+        team_id=req.team_id,
+        functional_domain=req.functional_domain,
+        organization_id=req.organization_id,
+        token_budget=req.token_budget,
+    )
+
+
+@router.post(
+    "/brains/promote",
+    summary="Digest Completed Chat Turn and Promote Insights to Multi-Tier Brains",
+)
+async def promote_chat_memory(req: MemoryPromoteRequest):
+    return await chat_memory_promoter.digest_session_and_promote(
+        session_id=req.session_id,
+        agent_id=req.agent_id,
+        user_messages=req.user_messages,
+        agent_responses=req.agent_responses,
+        team_id=req.team_id,
+        functional_domain=req.functional_domain,
+        organization_id=req.organization_id,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Track #7: Agent Persona & Avatar Studio Endpoints (Flow 10)
+# ---------------------------------------------------------------------------
+try:
+    from .agent_persona_service import agent_persona_service
+except ImportError:
+    from agent_persona_service import agent_persona_service
+
+
+class AgentPersonaUpdateRequest(BaseModel):
+    human_name: Optional[str] = None
+    role_title: Optional[str] = None
+    bio: Optional[str] = None
+    organization_id: str = "org_default"
+
+
+@router.get("/personas", summary="List All Agent Personas & SVG Avatars")
+async def list_agent_personas():
+    return [
+        p.model_dump() if hasattr(p, "model_dump") else p.dict()
+        for p in agent_persona_service.list_personas()
+    ]
+
+
+@router.get("/personas/{agent_id}", summary="Get Agent Persona & SVG Avatar")
+async def get_agent_persona(agent_id: str):
+    p = agent_persona_service.get_persona(agent_id)
+    return p.model_dump() if hasattr(p, "model_dump") else p.dict()
+
+
+@router.put("/personas/{agent_id}", summary="Update Agent Persona & Regenerate Avatar")
+async def update_agent_persona(agent_id: str, req: AgentPersonaUpdateRequest):
+    p = agent_persona_service.update_persona(
+        agent_id=agent_id,
+        human_name=req.human_name,
+        role_title=req.role_title,
+        bio=req.bio,
+        organization_id=req.organization_id,
+    )
+    return p.model_dump() if hasattr(p, "model_dump") else p.dict()
+
+
+# ---------------------------------------------------------------------------
 # Direct /brains Root Router (for callers not using /api prefix)
 # ---------------------------------------------------------------------------
 brain_router = APIRouter(tags=["brains"])
